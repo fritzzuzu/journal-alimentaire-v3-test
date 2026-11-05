@@ -26,7 +26,7 @@ button:active{transform:scale(.99)}
 .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:18px;padding:7px 10px;background:#fff;font-size:13px}.chip.selected{background:var(--pale);border-color:var(--green);color:var(--green);font-weight:700}
 .status button{width:100%;padding:10px 4px;border:1px solid var(--line);border-radius:10px;background:white;font-weight:600}.statusrow{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .status button.sel-good{background:#e3f1e6;border-color:#6da47a}.status button.sel-mid{background:#ffedd5;border-color:#f59e0b;color:#9a3412}.status button.sel-bad{background:#fee2e2;border-color:#ef4444;color:#991b1b}
-.event{border:1px solid var(--line);border-radius:11px;padding:10px;margin:8px 0}.eventhead{display:flex;justify-content:space-between;gap:8px;align-items:center}.eventactions{display:flex;gap:6px;flex-shrink:0}.event .small{margin-top:5px}.eventline{margin:5px 0;line-height:1.45}.eventline strong{color:var(--ink)}.statuspill{display:inline-block;padding:4px 8px;border-radius:8px;margin:3px 4px 3px 0;font-weight:650;font-size:13px}.statuspill.mid{background:#ffedd5;color:#9a3412;border:1px solid #f59e0b}.statuspill.bad{background:#fee2e2;color:#991b1b;border:1px solid #ef4444}.statuspill.good{background:#dcefe0;color:#245d34}
+.event{border:1px solid var(--line);border-radius:11px;padding:10px;margin:8px 0}.eventhead{display:flex;justify-content:space-between;gap:8px;align-items:center}.eventactions{display:flex;gap:6px;flex-shrink:0}.event .small{margin-top:5px}.eventline{margin:5px 0;line-height:1.45}.eventline strong{color:var(--ink)}.statuspill{display:inline-block;padding:4px 8px;border-radius:8px;margin:3px 4px 3px 0;font-weight:650;font-size:13px}.statuspill.mid{background:#ffedd5;color:#9a3412;border:1px solid #f59e0b}.statuspill.bad{background:#fee2e2;color:#991b1b;border:1px solid #ef4444}.statuspill.good{background:#dcefe0;color:#245d34}.statuspill.unknown{background:#eee;color:#333}
 .row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.hidden{display:none!important}
 .notice{background:#f0f4f1;border-radius:10px;padding:10px;font-size:13px;color:#43564b}.metric{padding:11px 0;border-bottom:1px solid var(--line)}.metrichead{display:flex;justify-content:space-between;gap:8px;font-weight:650}.bar{height:7px;background:#edf0ed;border-radius:10px;margin-top:7px;overflow:hidden}.bar>span{display:block;height:100%;background:#6e9c82}
 .daygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}.daycell{min-height:43px;border:1px solid var(--line);border-radius:9px;background:white;padding:5px 2px;text-align:center;font-size:13px}.daycell.mixed{background:#ffedd5;border-color:#f59e0b}.daycell.good{background:#e3f1e6}.daycell.bad{background:#f7e4e1}.daycell.today{outline:2px solid var(--green)}
@@ -66,12 +66,27 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding:18px}
 <label for="dayDate">Journée sélectionnée</label><input type="date" id="dayDate"><div id="dayList"></div>
 </div></section>
 
-<section id="analyse" class="tab hidden"><div class="panel">
-<h2>Associations sur les 24 dernières heures</h2>
-<p class="small">Pour chaque observation, l'application regarde les consommations enregistrées dans les 24 heures précédentes. Elle compare la fréquence de présence d'un élément avant les observations « mauvais » et « bien ». Une association ne prouve pas une cause.</p>
+<section id="analyse" class="tab hidden">
+<div class="panel">
+<h2>Vue d'ensemble</h2>
+<p class="small">Les journées sont classées à partir des observations enregistrées : difficile si au moins un indicateur est « Mauvais », satisfaisante si tous les indicateurs renseignés sont « Bien », intermédiaire dans les autres cas. Une journée sans observation n'est pas classée.</p>
+<div id="analysisOverview"></div>
+</div>
+<div class="panel">
+<h2>Analyse automatique</h2>
+<p class="small">Compare les consommations et perturbateurs présents dans les 24 heures avant les journées difficiles et satisfaisantes. Les journées intermédiaires ne sont pas utilisées dans cette comparaison.</p>
 <label for="analysisMetric">Indicateur à analyser</label><select id="analysisMetric"></select>
 <div id="analysisResult"></div>
-</div></section>
+</div>
+<div class="panel">
+<h2>Comparer deux journées</h2>
+<p class="small">Choisis une journée satisfaisante et une journée difficile dans ton journal. L'application mettra en évidence les éléments enregistrés dans les 24 heures précédentes.</p>
+<label for="compareGoodDay">Journée satisfaisante</label><select id="compareGoodDay"></select>
+<label for="compareBadDay">Journée difficile</label><select id="compareBadDay"></select>
+<button class="primary" id="compareDays" style="width:100%;margin-top:10px">Comparer ces journées</button>
+<div id="manualComparison"></div>
+</div>
+</section>
 
 <section id="donnees" class="tab hidden">
 <div class="panel"><h2>Mes aliments et leurs perturbateurs habituels</h2>
@@ -146,9 +161,21 @@ function renderEntryPerturbators(){
 }
 function renderCategories(){el("categories").innerHTML=db.foods.map((c,i)=>`<div class="cat"><strong>${esc(c.name)}</strong><div class="chips">${c.items.map(f=>{let k=foodKey(c.name,f);return `<button class="chip foodchip ${selectedItems.has(k)?"selected":""}" data-key="${esc(k)}">${esc(f)}</button>`}).join("")}</div></div>`).join("");document.querySelectorAll(".foodchip").forEach(b=>b.onclick=()=>{selectedItems.has(b.dataset.key)?selectedItems.delete(b.dataset.key):selectedItems.add(b.dataset.key);renderCategories();renderSelectedTags();renderEntryPerturbators()});renderSelectedTags();renderEntryPerturbators()}
 function renderSelectedTags(){let tags=selectedTags();el("selectedTags").innerHTML=selectedItems.size?`Aliments sélectionnés : ${selectedItems.size}<br>Perturbateurs habituels : ${tags.length?tags.map(t=>`<span class="chip selected">${esc(t)}</span>`).join(" "):"aucun renseigné"}<br><span>Tu peux ajouter ou retirer des perturbateurs pour cette consommation dans la configuration des aliments.</span>`:"Aucun aliment sélectionné."}
-function renderStatuses(){indicators=[...baseIndicators,...(db.customIndicators||[])];const disabled=new Set(db.disabledIndicators||[]);const active=indicators.map((name,i)=>({name,i})).filter(x=>!disabled.has(x.name));el("statuses").innerHTML=active.map(({name,i})=>`<div style="margin:13px 0"><strong style="font-size:14px">${esc(name)}</strong><div class="status statusrow" data-ind="${i}">${levels.map(l=>`<button type="button" data-level="${l}">${l}</button>`).join("")}</div></div>`).join("")||"<p class=small>Aucun symptôme actif. Tu peux en ajouter dans Listes & sauvegardes.</p>";document.querySelectorAll(".status button").forEach(b=>b.onclick=()=>{b.parentElement.querySelectorAll("button").forEach(x=>x.className="");b.className=levelClass[b.dataset.level]});el("analysisMetric").innerHTML=active.map(({name,i})=>`<option value="${i}">${esc(name)}</option>`).join("");if(!active.length)el("analysisResult").innerHTML="<p class=small>Ajoute ou réactive un indicateur pour lancer une analyse.</p>"}
-function selectedStatus(){let s={};document.querySelectorAll(".statusrow").forEach(r=>{let b=r.querySelector("button[class]");if(b)s[r.dataset.ind]=b.dataset.level});return s}
-function setStatuses(s={}){renderStatuses();Object.entries(s).forEach(([i,v])=>{let r=document.querySelector(`.statusrow[data-ind="${i}"]`),b=r&&[...r.querySelectorAll("button")].find(x=>x.dataset.level===v);if(b)b.className=levelClass[v]})}
+function renderStatuses(){
+ indicators=[...baseIndicators,...(db.customIndicators||[])];
+ const disabled=new Set(db.disabledIndicators||[]);
+ const active=indicators.map((name,i)=>({name,i})).filter(x=>!disabled.has(x.name));
+ el("statuses").innerHTML=active.map(({name,i})=>`<div style="margin:13px 0"><strong style="font-size:14px">${esc(name)}</strong><div class="status statusrow" data-ind="${i}">${levels.map(l=>`<button type="button" data-level="${l}" data-selected="false">${l}</button>`).join("")}</div></div>`).join("")||"<p class=small>Aucun symptôme actif. Tu peux en ajouter dans Listes & sauvegardes.</p>";
+ document.querySelectorAll(".status button").forEach(b=>b.onclick=()=>{
+  b.parentElement.querySelectorAll("button").forEach(x=>{x.className="";x.dataset.selected="false"});
+  b.className=levelClass[b.dataset.level];b.dataset.selected="true";
+ });
+ el("analysisMetric").innerHTML=`<option value="global">État global de la journée</option>`+active.map(({name,i})=>`<option value="${i}">${esc(name)}</option>`).join("");
+ if(!active.length)el("analysisResult").innerHTML="<p class=small>Ajoute ou réactive un indicateur pour lancer une analyse.</p>";
+}
+function selectedStatus(){let s={};document.querySelectorAll(".statusrow").forEach(r=>{let b=r.querySelector('button[data-selected="true"]');if(b)s[r.dataset.ind]=b.dataset.level});return s}
+function normalizeLevel(v){if(v==="Bien"||v==="Moyen"||v==="Mauvais")return v;const x=String(v??"").trim().toLowerCase();if(["bien","good","bon","bonne","0","1","sel-good"].includes(x))return "Bien";if(["moyen","moyenne","medium","mid","2","sel-mid"].includes(x))return "Moyen";if(["mauvais","mauvaise","bad","3","sel-bad"].includes(x))return "Mauvais";return String(v??"")}
+function setStatuses(s={}){renderStatuses();Object.entries(s).forEach(([i,v])=>{let r=document.querySelector(`.statusrow[data-ind="${i}"]`),b=r&&[...r.querySelectorAll("button")].find(x=>normalizeLevel(x.dataset.level)===normalizeLevel(v));if(b){b.className=levelClass[normalizeLevel(v)];b.dataset.selected="true"}})}
 function addEvent(type,payload,time){db.events.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),type,time,...payload});persist();renderDay();renderCalendar();renderAnalysis();updateBackupInfo()}
 function clearFood(){selectedItems.clear();renderCategories();el("medName").value="";el("genericMeal").value="";renderEntryPerturbators()}
 function renderDay(){const date=el("dayDate").value||new Date().toLocaleDateString("en-CA");const list=db.events.filter(e=>e.time.slice(0,10)===date).sort((a,b)=>a.time.localeCompare(b.time));el("dayList").innerHTML=list.length?list.map(e=>eventHtml(e)).join(""):"<p class='small'>Aucune saisie pour cette date.</p>";bindEventButtons()}
@@ -163,8 +190,8 @@ function eventHtml(e){
   if((e.perturbators||[]).length)body+=`<div class="eventline"><strong>Perturbateurs :</strong> ${esc(e.perturbators.join(", "))}</div>`;
   if((e.suspectedPerturbators||[]).length)body+=`<div class="eventline"><strong>Perturbateurs possibles :</strong> ${esc(e.suspectedPerturbators.join(", "))}</div>`;
  }else{
-  const entries=Object.entries(e.status||{}).filter(([k])=>indicators[+k]);
-  body=entries.map(([k,v])=>{const cls=v==="Mauvais"?"bad":v==="Moyen"?"mid":"good";return `<span class="statuspill ${cls}">${esc(indicators[+k])} : ${esc(v)}</span>`}).join("");
+  const entries=Object.entries(e.status||{}).map(([k,v])=>{const idx=/^\\d+$/.test(k)?+k:indicators.findIndex(n=>n.toLowerCase()===String(k).toLowerCase());return {name:idx>=0?indicators[idx]:k,value:normalizeLevel(v)}}).filter(x=>x.name);
+  body=entries.map(({name,value})=>{const cls=value==="Mauvais"?"bad":value==="Moyen"?"mid":value==="Bien"?"good":"unknown";return `<span class="statuspill ${cls}">${esc(name)} : ${esc(value)}</span>`}).join("");
   if(e.notes)body+=`<div class="eventline"><strong>Remarques :</strong> ${esc(e.notes)}</div>`;
  }
  return `<div class="event"><div class="eventhead"><strong>${e.type==="food"?"🍽️ Consommation":"📋 Observation"} · ${time}</strong><div class="eventactions"><button class="neutral" data-edit="${e.id}">Modifier</button><button class="danger" data-del="${e.id}">×</button></div></div><div>${body||"<span class=small>—</span>"}</div></div>`
@@ -175,12 +202,86 @@ if(e.type==="food"){content+=`<p class="small">Cette modification concerne les a
 else{content+=`<div id="editStatuses"></div><label>Remarques</label><textarea id="editNotes">${esc(e.notes||"")}</textarea>`}
 content+=`<button class="primary" id="saveEdit" style="width:100%;margin-top:14px">Enregistrer les modifications</button></div></div>`;root.innerHTML=content;el("closeEdit").onclick=()=>root.innerHTML="";
 if(e.type==="food"){let old=new Set((e.items||[]).map(x=>foodKey(x.category,x.name)));el("editFoodList").innerHTML=db.foods.map(c=>`<div style="margin:8px 0"><strong>${esc(c.name)}</strong><div class="chips">${c.items.map(n=>`<label style="display:inline-flex;align-items:center;gap:4px"><input type="checkbox" class="editfood" data-cat="${esc(c.name)}" data-name="${esc(n)}" ${old.has(foodKey(c.name,n))?"checked":""}>${esc(n)}</label>`).join("")}</div></div>`).join("");let p=new Set(e.perturbators||[]);el("editPert").innerHTML=allPerturbators().map(t=>`<label><input type="checkbox" class="editpert" value="${esc(t)}" ${p.has(t)?"checked":""}>${esc(t)}</label>`).join("");let sp=new Set(e.suspectedPerturbators||[]);el("editSus").innerHTML=allPerturbators().map(t=>`<label><input type="checkbox" class="editsus" value="${esc(t)}" ${sp.has(t)?"checked":""}>${esc(t)}</label>`).join("")}
-else{const disabled=new Set(db.disabledIndicators||[]);el("editStatuses").innerHTML=indicators.map((n,i)=>({n,i})).filter(x=>!disabled.has(x.n)).map(({n,i})=>`<div style="margin:12px 0"><strong>${esc(n)}</strong><div class="status statusrow" data-edit-ind="${i}">${levels.map(l=>`<button type="button" data-level="${l}" class="${e.status?.[i]===l?levelClass[l]:""}">${l}</button>`).join("")}</div></div>`).join("");document.querySelectorAll("#editStatuses button").forEach(b=>b.onclick=()=>{b.parentElement.querySelectorAll("button").forEach(x=>x.className="");b.className=levelClass[b.dataset.level]})}
-el("saveEdit").onclick=()=>{e.time=el("editTime").value;if(e.type==="food"){e.items=[...document.querySelectorAll(".editfood:checked")].map(x=>({category:x.dataset.cat,name:x.dataset.name}));e.perturbators=[...document.querySelectorAll(".editpert:checked")].map(x=>x.value);e.suspectedPerturbators=[...document.querySelectorAll(".editsus:checked")].map(x=>x.value);e.genericMeal=el("editGeneric").value.trim();e.medication=el("editMed").value.trim()}else{e.status={...(e.status||{})};document.querySelectorAll("[data-edit-ind]").forEach(r=>{let b=r.querySelector("button[class]");if(b)e.status[r.dataset.editInd]=b.dataset.level;else delete e.status[r.dataset.editInd]});e.notes=el("editNotes").value.trim()}persist();root.innerHTML="";renderDay();renderCalendar();renderAnalysis();updateBackupInfo()}}
-function renderAnalysis(){let idx=+el("analysisMetric").value||0,bad=db.events.filter(e=>e.type==="obs"&&e.status?.[idx]==="Mauvais"),good=db.events.filter(e=>e.type==="obs"&&e.status?.[idx]==="Bien"),all=[...bad.map(o=>({o,group:"bad"})),...good.map(o=>({o,group:"good"}))];let map={};function exposure(obs){let start=new Date(obs.time).getTime()-86400000,end=new Date(obs.time).getTime();return db.events.filter(e=>e.type==="food"&&new Date(e.time).getTime()>=start&&new Date(e.time).getTime()<end)}
-all.forEach(({o,group})=>{let seen=new Set();exposure(o).forEach(e=>{(e.items||[]).forEach(it=>seen.add(it.name));(e.perturbators||[]).forEach(t=>seen.add("Perturbateur identifié : "+t));(e.suspectedPerturbators||[]).forEach(t=>seen.add("Perturbateur suspecté : "+t));if(e.genericMeal)seen.add("Plat / repas : "+e.genericMeal)});seen.forEach(n=>{map[n]??={bad:0,good:0};map[n][group]++})});
-let rows=Object.entries(map).map(([n,v])=>({n,...v,badRate:bad.length?v.bad/bad.length:0,goodRate:good.length?v.good/good.length:0,diff:bad.length?v.bad/bad.length-(good.length?v.good/good.length:0):0})).sort((a,b)=>b.diff-a.diff);
-el("analysisResult").innerHTML=`<div class="notice">${bad.length} observation(s) « mauvais » et ${good.length} observation(s) « bien » pour ${esc(indicators[idx].toLowerCase())}. Les observations « moyen » ne sont pas utilisées dans cette comparaison.</div>`+(rows.length?rows.map(r=>`<div class="metric"><div class="metrichead"><span>${esc(r.n)}</span><span>${Math.round(r.badRate*100)} % / ${Math.round(r.goodRate*100)} %</span></div><div class="small">Présent avant ${r.bad} / ${bad.length} observations mauvaises et ${r.good} / ${good.length} observations bonnes.</div><div class="bar"><span style="width:${Math.min(100,Math.max(0,r.badRate*100))}%"></span></div></div>`).join(""):"<p class='small'>Pas encore assez de données pour comparer. Il faut des observations « bien » et « mauvais » ainsi que des consommations dans les 24 heures précédentes.</p>") }
+else{const disabled=new Set(db.disabledIndicators||[]);el("editStatuses").innerHTML=indicators.map((n,i)=>({n,i})).filter(x=>!disabled.has(x.n)).map(({n,i})=>`<div style="margin:12px 0"><strong>${esc(n)}</strong><div class="status statusrow" data-edit-ind="${i}">${levels.map(l=>`<button type="button" data-level="${l}" class="${normalizeLevel(e.status?.[i])===l?levelClass[l]:""}" data-selected="${normalizeLevel(e.status?.[i])===l?"true":"false"}">${l}</button>`).join("")}</div></div>`).join("");document.querySelectorAll("#editStatuses button").forEach(b=>b.onclick=()=>{b.parentElement.querySelectorAll("button").forEach(x=>{x.className="";x.dataset.selected="false"});b.className=levelClass[b.dataset.level];b.dataset.selected="true"})}
+el("saveEdit").onclick=()=>{e.time=el("editTime").value;if(e.type==="food"){e.items=[...document.querySelectorAll(".editfood:checked")].map(x=>({category:x.dataset.cat,name:x.dataset.name}));e.perturbators=[...document.querySelectorAll(".editpert:checked")].map(x=>x.value);e.suspectedPerturbators=[...document.querySelectorAll(".editsus:checked")].map(x=>x.value);e.genericMeal=el("editGeneric").value.trim();e.medication=el("editMed").value.trim()}else{e.status={...(e.status||{})};document.querySelectorAll("[data-edit-ind]").forEach(r=>{let b=r.querySelector('button[data-selected="true"]');if(b)e.status[r.dataset.editInd]=b.dataset.level;else delete e.status[r.dataset.editInd]});e.notes=el("editNotes").value.trim()}persist();root.innerHTML="";renderDay();renderCalendar();renderAnalysis();updateBackupInfo()}}
+function statusAt(e,idx){
+ const st=e.status||{};
+ let v=st[idx];
+ if(v===undefined && indicators[idx])v=st[indicators[idx]];
+ return normalizeLevel(v);
+}
+function observationDayRecords(metric){
+ const obs=db.events.filter(e=>e.type==="obs").sort((a,b)=>a.time.localeCompare(b.time));
+ const byDate=new Map();
+ obs.forEach(o=>{
+  const date=String(o.time||"").slice(0,10);if(!date)return;
+  let level="";
+  if(metric==="global"){
+   const vals=Object.keys(o.status||{}).map(k=>{const idx=/^\d+$/.test(k)?+k:indicators.findIndex(n=>n.toLowerCase()===String(k).toLowerCase());return normalizeLevel(idx>=0?statusAt(o,idx):o.status[k])}).filter(v=>["Bien","Moyen","Mauvais"].includes(v));
+   if(vals.includes("Mauvais"))level="Mauvais";else if(vals.length&&vals.every(v=>v==="Bien"))level="Bien";else if(vals.length)level="Moyen";
+  }else{
+   const idx=+metric;level=statusAt(o,idx);
+  }
+  if(!["Bien","Moyen","Mauvais"].includes(level))return;
+  const prev=byDate.get(date);
+  const rank={Bien:1,Moyen:2,Mauvais:3};
+  if(!prev||rank[level]>rank[prev.level]|| (level===prev.level&&o.time>prev.time))byDate.set(date,{date,level,time:o.time,event:o});
+ });
+ return [...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+function foodExposure(record){
+ const end=new Date(record.time).getTime(),start=end-86400000;
+ return db.events.filter(e=>e.type==="food"&&new Date(e.time).getTime()>=start&&new Date(e.time).getTime()<end);
+}
+function exposureLabels(record){
+ const labels=new Set();
+ foodExposure(record).forEach(e=>{
+  (e.perturbators||[]).forEach(t=>labels.add("Perturbateur identifié : "+t));
+  (e.suspectedPerturbators||[]).forEach(t=>labels.add("Perturbateur suspecté : "+t));
+  (e.items||[]).forEach(it=>labels.add("Aliment : "+it.name));
+  if(e.genericMeal)labels.add("Plat générique : "+e.genericMeal);
+  if(e.medication)labels.add("Médicament : "+e.medication);
+ });
+ return labels;
+}
+function renderAnalysis(){
+ const metric=el("analysisMetric").value||"global";
+ const records=observationDayRecords(metric);
+ const good=records.filter(r=>r.level==="Bien"),bad=records.filter(r=>r.level==="Mauvais"),mid=records.filter(r=>r.level==="Moyen");
+ el("analysisOverview").innerHTML=`<div class="row"><div class="notice"><strong>${good.length}</strong><br>Journées satisfaisantes</div><div class="notice"><strong>${mid.length}</strong><br>Journées intermédiaires</div><div class="notice"><strong>${bad.length}</strong><br>Journées difficiles</div></div><p class="small">Une journée est comptée une seule fois. En cas de plusieurs observations, le niveau le plus défavorable de la journée est retenu. « Global » tient compte de tous les indicateurs renseignés.</p>`;
+ const map=new Map();
+ [...bad.map(r=>({...r,group:"bad"})),...good.map(r=>({...r,group:"good"}))].forEach(r=>{
+  exposureLabels(r).forEach(label=>{if(!map.has(label))map.set(label,{bad:0,good:0});map.get(label)[r.group]++});
+ });
+ const rows=[...map.entries()].map(([label,v])=>({label,...v,badRate:bad.length?v.bad/bad.length:0,goodRate:good.length?v.good/good.length:0,diff:(bad.length?v.bad/bad.length:0)-(good.length?v.good/good.length:0)}));
+ const groupOrder=x=>x.startsWith("Perturbateur identifié")?0:x.startsWith("Perturbateur suspecté")?1:x.startsWith("Plat générique")?2:x.startsWith("Aliment")?3:4;
+ rows.sort((a,b)=>groupOrder(a.label)-groupOrder(b.label)||b.diff-a.diff);
+ let html=`<div class="notice">${bad.length} journée(s) difficiles et ${good.length} satisfaisantes utilisées. Les journées intermédiaires sont écartées. Pour chaque élément, les deux pourcentages indiquent sa présence avant les journées difficiles / satisfaisantes.</div>`;
+ if(bad.length&&good.length&&rows.length){
+  html+=rows.map(r=>{
+   const gap=Math.round(r.diff*100),label=gap>=20?"Plus fréquent les jours difficiles":gap<=-20?"Plus fréquent les jours satisfaisants":"Peu discriminant";
+   const color=gap>=20?"#9a3412":gap<=-20?"#245d34":"#68736c";
+   return `<div class="metric"><div class="metrichead"><span>${esc(r.label)}</span><span>${Math.round(r.badRate*100)} % / ${Math.round(r.goodRate*100)} %</span></div><div class="small">${r.bad}/${bad.length} journées difficiles · ${r.good}/${good.length} satisfaisantes · écart ${gap>0?"+":""}${gap} points</div><div class="small" style="color:${color};font-weight:700">${label}</div></div>`;
+  }).join("");
+ }else html+="<p class='small'>Il faut au moins une journée satisfaisante et une journée difficile, avec des consommations enregistrées dans les 24 heures précédentes, pour établir une comparaison.</p>";
+ html+=`<p class="small">Limites : cette analyse repère des associations, pas des causes. Les journées proches dans le temps peuvent partager des expositions. Les ingrédients inconnus d'un plat ne peuvent pas être déduits. Les pourcentages décrivent les journées observées, pas un risque médical.</p>`;
+ el("analysisResult").innerHTML=html;
+ const options=records.map(r=>`<option value="${r.date}">${r.date} — ${r.level}</option>`).join("");
+ const goodSel=el("compareGoodDay"),badSel=el("compareBadDay");
+ const oldGood=goodSel.value,oldBad=badSel.value;
+ goodSel.innerHTML=good.map(r=>`<option value="${r.date}">${r.date}</option>`).join("");
+ badSel.innerHTML=bad.map(r=>`<option value="${r.date}">${r.date}</option>`).join("");
+ if(good.some(r=>r.date===oldGood))goodSel.value=oldGood;
+ if(bad.some(r=>r.date===oldBad))badSel.value=oldBad;
+ if(!good.length||!bad.length)el("manualComparison").innerHTML="<p class='small'>Il faut au moins une journée satisfaisante et une journée difficile pour utiliser cette comparaison.</p>";
+}
+function compareSelectedDays(){
+ const good=observationDayRecords(el("analysisMetric").value||"global").find(r=>r.date===el("compareGoodDay").value);
+ const bad=observationDayRecords(el("analysisMetric").value||"global").find(r=>r.date===el("compareBadDay").value);
+ if(!good||!bad){el("manualComparison").innerHTML="<p class='small'>Choisis une journée de chaque type.</p>";return}
+ const a=exposureLabels(good),b=exposureLabels(bad),onlyBad=[...b].filter(x=>!a.has(x)),onlyGood=[...a].filter(x=>!b.has(x)),common=[...a].filter(x=>b.has(x));
+ el("manualComparison").innerHTML=`<div class="notice">Comparaison des consommations dans les 24 heures précédant chaque observation de référence.</div><h3>Présents les deux jours</h3><p>${common.length?common.map(esc).join(" · "):"Aucun élément commun enregistré."}</p><h3>Seulement avant la journée difficile</h3><p>${onlyBad.length?onlyBad.map(esc).join(" · "):"Aucune différence enregistrée."}</p><h3>Seulement avant la journée satisfaisante</h3><p>${onlyGood.length?onlyGood.map(esc).join(" · "):"Aucune différence enregistrée."}</p><p class="small">Une différence n'indique pas nécessairement une cause : d'autres facteurs peuvent varier entre ces deux journées.</p>`;
+}
 
 function renderCategoryManager(){el("categoryManager").innerHTML=db.foods.map((c,i)=>`<div class="tagline"><span><strong>${esc(c.name)}</strong> <span class="small">(${c.items.length} éléments)</span></span><span><button class="neutral" data-renamecat="${i}">Renommer</button> <button class="danger" data-delcat="${i}">Supprimer</button></span></div>`).join("");document.querySelectorAll("[data-renamecat]").forEach(b=>b.onclick=()=>{let i=+b.dataset.renamecat,old=db.foods[i].name,n=prompt("Nouveau nom de catégorie",old);if(!n||!n.trim())return;n=n.trim();if(db.foods.some((c,j)=>j!==i&&c.name.toLowerCase()===n.toLowerCase())){alert("Cette catégorie existe déjà.");return}let c=db.foods[i];c.name=n;Object.keys(db.foodTags).filter(k=>k.startsWith(old+"::")).forEach(k=>{db.foodTags[n+k.slice(old.length)]=db.foodTags[k];delete db.foodTags[k]});db.events.forEach(e=>(e.items||[]).forEach(it=>{if(it.category===old)it.category=n}));persist();renderCategories();renderManage();renderCategoryManager()});document.querySelectorAll("[data-delcat]").forEach(b=>b.onclick=()=>{let i=+b.dataset.delcat,c=db.foods[i];if(c.name==="Non classés"){alert("La catégorie Non classés ne peut pas être supprimée.");return}if(!confirm(`Supprimer la catégorie « ${c.name} » ? Ses aliments seront déplacés dans Non classés. Les anciens repas seront conservés.`))return;let unc=db.foods.find(x=>x.name==="Non classés");c.items.forEach(n=>{if(!unc.items.includes(n))unc.items.push(n)});db.foods.splice(i,1);persist();renderCategories();renderManage();renderCategoryManager()})}
 function renderIndicatorManager(){
@@ -216,7 +317,7 @@ function init(){
  el("saveFood").onclick=()=>{let items=[...selectedItems].map(k=>{let [category,name]=k.split("::");return {category,name}}),med=el("medName").value.trim();let generic=el("genericMeal").value.trim();if(!items.length&&!med&&!generic){alert("Sélectionne un aliment, indique un plat / repas générique ou un médicament.");return}addEvent("food",{items,genericMeal:generic,perturbators:[...document.querySelectorAll(".entrypert:checked")].map(x=>x.value),suspectedPerturbators:[...document.querySelectorAll(".entrysus:checked")].map(x=>x.value),medication:med},el("eventTime").value);clearFood();alert("Consommation enregistrée.")};
  el("clearFood").onclick=clearFood;
  el("saveObs").onclick=()=>{let status=selectedStatus(),notes=el("notes").value.trim();if(!Object.keys(status).length&&!notes){alert("Sélectionne au moins un indicateur ou ajoute une remarque.");return}addEvent("obs",{status,notes},el("obsTime").value);el("notes").value="";setStatuses();alert("Observation enregistrée.")};
- el("dayDate").onchange=renderDay;el("analysisMetric").onchange=renderAnalysis;
+ el("dayDate").onchange=renderDay;el("analysisMetric").onchange=renderAnalysis;el("compareDays").onclick=compareSelectedDays;
  el("prevMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()-1);renderCalendar()};el("nextMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()+1);renderCalendar()};el("todayBtn").onclick=()=>{monthCursor=new Date();el("dayDate").value=new Date().toLocaleDateString("en-CA");renderCalendar();renderDay()};
  el("manageCat").onchange=renderManageFoods;el("manageFood").onchange=renderFoodTagEditor;el("removeCat").onchange=renderRemoveFoods;
  el("saveFoodTags").onclick=()=>{let c=db.foods[+el("manageCat").value],n=el("manageFood").value;if(!n)return;db.foodTags[foodKey(c.name,n)]=[...document.querySelectorAll(".foodtag:checked")].map(x=>x.value);persist();renderCategories();renderFoodTagEditor();alert("Perturbateurs habituels enregistrés.")};
