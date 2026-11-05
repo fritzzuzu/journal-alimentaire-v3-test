@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#315b50">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Mon journal alimentaire</title>
+<style>
+:root{--green:#315b50;--pale:#eaf1ed;--bg:#f6f7f5;--ink:#202923;--muted:#68736c;--line:#dce3de;--red:#f7e4e1;--amber:#f7efd9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:var(--green);color:white;padding:18px 16px 16px;position:sticky;top:0;z-index:5}header h1{font-size:20px;margin:0 0 4px}header p{margin:0;font-size:13px;opacity:.85}
+main{max-width:780px;margin:auto;padding:14px 12px 90px}
+nav{display:flex;gap:7px;overflow:auto;padding:10px 0 4px;position:sticky;top:76px;background:var(--bg);z-index:4}
+nav button{white-space:nowrap;border:1px solid var(--line);background:white;border-radius:20px;padding:9px 13px;font-weight:600;color:var(--ink)}nav button.active{background:var(--green);color:white;border-color:var(--green)}
+.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:15px;margin:10px 0}
+h2{font-size:18px;margin:0 0 12px}h3{font-size:15px;margin:16px 0 8px}.small{font-size:13px;color:var(--muted)}
+label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}
+input,select,textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:white;color:var(--ink)}textarea{min-height:76px;resize:vertical}
+button.primary{background:var(--green);color:white;border:0;border-radius:11px;padding:12px 15px;font-weight:700;font-size:15px}
+button.secondary{background:var(--pale);color:var(--green);border:1px solid #d5e2da;border-radius:10px;padding:10px 12px;font-weight:650}
+button.danger{background:#fff1ef;color:#9a382e;border:1px solid #f0d0ca;border-radius:10px;padding:8px 10px}
+button.neutral{background:white;border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--ink)}
+button:active{transform:scale(.99)}
+.catgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.cat{border:1px solid var(--line);border-radius:12px;padding:11px;background:white}.cat strong{display:block;margin-bottom:7px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);border-radius:18px;padding:7px 10px;background:#fff;font-size:13px}.chip.selected{background:var(--pale);border-color:var(--green);color:var(--green);font-weight:700}
+.status button{width:100%;padding:10px 4px;border:1px solid var(--line);border-radius:10px;background:white;font-weight:600}.statusrow{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.status button.sel-good{background:#e3f1e6;border-color:#6da47a}.status button.sel-mid{background:var(--amber);border-color:#c7a64d}.status button.sel-bad{background:var(--red);border-color:#ce7b70}
+.event{border:1px solid var(--line);border-radius:11px;padding:10px;margin:8px 0}.eventhead{display:flex;justify-content:space-between;gap:8px;align-items:center}.eventactions{display:flex;gap:6px;flex-shrink:0}.event .small{margin-top:5px}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.hidden{display:none!important}
+.notice{background:#f0f4f1;border-radius:10px;padding:10px;font-size:13px;color:#43564b}.metric{padding:11px 0;border-bottom:1px solid var(--line)}.metrichead{display:flex;justify-content:space-between;gap:8px;font-weight:650}.bar{height:7px;background:#edf0ed;border-radius:10px;margin-top:7px;overflow:hidden}.bar>span{display:block;height:100%;background:#6e9c82}
+.daygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}.daycell{min-height:43px;border:1px solid var(--line);border-radius:9px;background:white;padding:5px 2px;text-align:center;font-size:13px}.daycell.mixed{background:#f7efd9}.daycell.good{background:#e3f1e6}.daycell.bad{background:#f7e4e1}.daycell.today{outline:2px solid var(--green)}
+.modalback{position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:10px}.modal{background:var(--bg);border-radius:18px 18px 12px 12px;max-width:700px;width:100%;max-height:92vh;overflow:auto;padding:16px}
+.tagline{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}.tagchecks{display:flex;flex-wrap:wrap;gap:6px}.tagchecks label{display:inline-flex;align-items:center;gap:5px;margin:3px 8px 3px 0;font-weight:500}.tagchecks input{width:auto}
+footer{font-size:12px;color:var(--muted);text-align:center;padding:18px}
+@media(min-width:600px){.catgrid{grid-template-columns:repeat(4,minmax(0,1fr))}.modalback{align-items:center}}
+</style>
+</head>
+<body>
+<header><h1>Mon journal alimentaire</h1><p>Observer mon alimentation et mon bien-être</p></header>
+<main>
+<nav id="nav"><button class="active" data-tab="saisie">Saisie</button><button data-tab="jour">Ma journée</button><button data-tab="analyse">Analyses</button><button data-tab="donnees">Listes & sauvegardes</button></nav>
+<section id="saisie" class="tab">
+<div class="panel">
+<h2>Ajouter une consommation</h2><label for="eventTime">Date et heure</label><input id="eventTime" type="datetime-local">
+<p class="small">Sélectionne des aliments précis, un plat générique ou simplement un type de repas. Tu peux combiner les approches.</p>
+<label for="genericMeal">Plat ou repas générique (facultatif)</label><input id="genericMeal" placeholder="Ex. soupe de légumes, repas au restaurant, plat préparé…">
+<p class="small">Les aliments sélectionnés et leurs perturbateurs habituels restent facultatifs.</p>
+<div id="categories" class="catgrid"></div>
+<div id="selectedTags" class="small" style="margin-top:10px"></div><label>Perturbateurs identifiés</label><div id="entryPerturbators" class="tagchecks"></div>
+<label>Perturbateurs possibles / suspectés</label><div id="entrySuspected" class="tagchecks"></div>
+<label for="medName">Médicament (saisie libre)</label><input id="medName" placeholder="Nom du médicament (facultatif)">
+<div class="row" style="margin-top:12px"><button class="primary" id="saveFood">Enregistrer</button><button class="secondary" id="clearFood">Effacer</button></div>
+</div>
+<div class="panel">
+<h2>Mon état / symptômes</h2><label for="obsTime">Date et heure de l'observation</label><input id="obsTime" type="datetime-local">
+<div id="statuses"></div><label for="notes">Remarques</label><textarea id="notes" placeholder="Événement particulier, stress, contexte..."></textarea>
+<button class="primary" id="saveObs" style="width:100%;margin-top:12px">Enregistrer mon état</button>
+</div></section>
+
+<section id="jour" class="tab hidden"><div class="panel">
+<div class="row"><h2 style="margin:0">Calendrier</h2><button class="secondary" id="todayBtn">Aujourd'hui</button></div>
+<div class="row"><button class="neutral" id="prevMonth">‹</button><strong id="monthTitle" style="text-align:center"></strong><button class="neutral" id="nextMonth">›</button></div>
+<div class="daygrid" id="monthGrid"></div>
+<p class="small">Vert : toutes les observations du jour sont « bien » · jaune : mélange ou moyen · rouge : au moins un indicateur « mauvais ». Appuie sur une date pour voir les événements.</p>
+<label for="dayDate">Journée sélectionnée</label><input type="date" id="dayDate"><div id="dayList"></div>
+</div></section>
+
+<section id="analyse" class="tab hidden"><div class="panel">
+<h2>Associations sur les 24 dernières heures</h2>
+<p class="small">Pour chaque observation, l'application regarde les consommations enregistrées dans les 24 heures précédentes. Elle compare la fréquence de présence d'un élément avant les observations « mauvais » et « bien ». Une association ne prouve pas une cause.</p>
+<label for="analysisMetric">Indicateur à analyser</label><select id="analysisMetric"></select>
+<div id="analysisResult"></div>
+</div></section>
+
+<section id="donnees" class="tab hidden">
+<div class="panel"><h2>Mes aliments et leurs perturbateurs habituels</h2>
+<p class="small">Configure chaque aliment une seule fois. Ses perturbateurs seront automatiquement associés aux prochaines consommations. Tu peux aussi les corriger ponctuellement lors d'une saisie.</p>
+<label for="manageCat">Catégorie</label><select id="manageCat"></select><label for="manageFood">Aliment</label><select id="manageFood"></select>
+<div id="foodTagEditor"></div><button class="primary" id="saveFoodTags" style="margin-top:12px;width:100%">Enregistrer les perturbateurs de cet aliment</button>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<h3>Gérer les aliments</h3>
+<p class="small">Sélectionne une catégorie et un aliment, puis supprime-le s'il a été ajouté par erreur. Les événements déjà enregistrés dans ton journal ne seront pas effacés.</p>
+<div class="row"><div><label for="removeCat">Catégorie</label><select id="removeCat"></select></div><div><label for="removeFood">Aliment à supprimer</label><select id="removeFood"></select></div></div>
+<button class="danger" id="deleteFood" style="margin-top:8px">Supprimer cet aliment de la liste</button>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<h3>Ajouter un aliment à une catégorie</h3><label for="newCat">Catégorie</label><select id="newCat"></select><label for="newFood">Nouvel aliment</label><input id="newFood" placeholder="Ex. patate douce"><button class="secondary" id="addFood" style="margin-top:9px">Ajouter à ma liste</button>
+</div>
+<div class="panel"><h2>Gérer mes catégories</h2>
+<p class="small">Tu peux créer tes propres catégories. Si tu supprimes une catégorie, ses aliments sont déplacés dans « Non classés » et les anciennes consommations restent intactes.</p>
+<label for="newCategoryName">Nouvelle catégorie</label><div class="row"><input id="newCategoryName" placeholder="Ex. Plats préparés"><button class="secondary" id="addCategory">Ajouter</button></div>
+<div id="categoryManager"></div>
+</div>
+<div class="panel"><h2>Mes symptômes personnalisés</h2><p class="small">Les indicateurs ajoutés ici apparaîtront dans les observations et les analyses.</p>
+<label for="newIndicator">Ajouter un symptôme ou indicateur</label><div class="row"><input id="newIndicator" placeholder="Ex. vertiges"><button class="secondary" id="addIndicator">Ajouter</button></div><div id="indicatorManager"></div>
+</div>
+<div class="panel"><h2>Mes perturbateurs personnalisés</h2>
+<p class="small">La liste est conservée sur ton téléphone et incluse dans les sauvegardes. « Ail » est déjà proposé par défaut.</p>
+<div id="customPerturbatorList"></div>
+<label for="newPerturbator">Ajouter un perturbateur</label><input id="newPerturbator" placeholder="Ex. oignon, café...">
+<button class="secondary" id="addPerturbator" style="margin-top:9px">Ajouter à la liste</button>
+</div>
+<div class="panel"><h2>Sauvegarde et export</h2>
+<p class="small">Une sauvegarde automatique interne est conservée dans les données du navigateur. Elle ne protège pas contre la perte du téléphone ou l'effacement des données du navigateur. Exporte régulièrement le fichier JSON et conserve-le ailleurs.</p>
+<div class="row"><button class="secondary" id="exportCsv">Exporter pour Excel (CSV)</button><button class="secondary" id="exportJson">Sauvegarde complète (JSON)</button></div>
+<label for="importFile">Restaurer une sauvegarde JSON</label><input type="file" id="importFile" accept="application/json">
+<p id="backupInfo" class="small"></p><div id="storageInfo" class="small"></div>
+</div></section>
+<footer>Version 3.0 · Données locales à cet appareil · Aucun compte utilisateur</footer>
+</main>
+<div id="modalRoot"></div>
+<script>
+const KEY="journalAlimV1";
+const defaultCats=[
+ ["Protéines",["Œufs","Poulet","Dinde","Bœuf","Porc","Poisson","Thon","Jambon","Tofu"]],
+ ["Légumes",["Carottes","Courgettes","Brocolis","Tomates","Concombre","Aubergine","Poivrons","Salade","Oignons"]],
+ ["Féculents",["Riz","Pommes de terre","Patates douces","Quinoa","Pâtes","Pain","Avoine","Maïs"]],
+ ["Fruits",["Pomme","Banane","Poire","Orange","Kiwi","Fraises","Raisin","Agrumes"]],
+ ["Noix",["Amandes","Noix","Noisettes","Noix de cajou","Pistaches","Noix du Brésil"]],
+ ["Snacks",["Chips","Biscuits apéritifs","Chocolat","Biscuits","Crackers","Pop-corn"]],
+ ["Compléments",["Magnésium","Vitamine D","Vitamine C","Zinc","Oméga 3"]],
+ ["Médicaments",[]]
+];
+const defaultPerturbators=["Gluten","Lait / lactose","Levure","Additifs","Ultra-transformés","Ail"];
+const baseIndicators=["Inconfort intestinal","Selles","Urines","Reflux","Humeur","Anxiété","Sommeil","Fatigue","Énergie","Maux de tête","Nausées","Douleurs abdominales","Ballonnements"];
+let indicators=[...baseIndicators];
+const levels=["Bien","Moyen","Mauvais"], levelClass={"Bien":"sel-good","Moyen":"sel-mid","Mauvais":"sel-bad"};
+let db=load(), selectedItems=new Set(), monthCursor=new Date();
+function load(){try{let d=JSON.parse(localStorage.getItem(KEY));if(!d)return fresh();d.foods=d.foods||defaultCats.map(x=>({name:x[0],items:x[1]}));d.events=d.events||[];d.foodTags=d.foodTags||{};d.customPerturbators=d.customPerturbators||[];d.customIndicators=d.customIndicators||[];d.backups=d.backups||[];d.foods=d.foods.map(c=>({...c,items:c.items||[]}));d.foods.push(...[]);if(!d.foods.some(c=>c.name==="Non classés"))d.foods.push({name:"Non classés",items:[]});if(!d.foods.some(c=>c.name==="Plats génériques"))d.foods.push({name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]});indicators=[...baseIndicators,...d.customIndicators];return d}catch(e){return fresh()}}
+function fresh(){return {events:[],foods:[...defaultCats.map(x=>({name:x[0],items:x[1]})),{name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]}],foodTags:{},customPerturbators:[],customIndicators:[],backups:[]}}
+function persist(){const today=new Date().toLocaleDateString("en-CA");if(db.lastBackup!==today){db.backups.push({date:today,data:JSON.stringify({events:db.events,foods:db.foods,foodTags:db.foodTags,customPerturbators:db.customPerturbators,customIndicators:db.customIndicators})});db.backups=db.backups.slice(-7);db.lastBackup=today}localStorage.setItem(KEY,JSON.stringify(db));}
+function el(id){return document.getElementById(id)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function localISO(d=new Date()){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
+function allPerturbators(){return [...new Set([...defaultPerturbators,...(db.customPerturbators||[])])]}
+function foodKey(cat,name){return cat+"::"+name}
+function tagsFor(cat,name){return db.foodTags[foodKey(cat,name)]||[]}
+function selectedTags(){let s=new Set();selectedItems.forEach(k=>{let [c,n]=k.split("::");tagsFor(c,n).forEach(t=>s.add(t))});return [...s]}
+function renderEntryPerturbators(){
+ const inherited=new Set(selectedTags());
+ const current=new Set([...document.querySelectorAll(".entrypert:checked")].map(x=>x.value));
+ const chosen=current.size?current:inherited;
+ el("entryPerturbators").innerHTML=allPerturbators().map(t=>`<label><input type="checkbox" class="entrypert" value="${esc(t)}" ${chosen.has(t)?"checked":""}>${esc(t)}</label>`).join("");
+ const suspected=new Set([...document.querySelectorAll(".entrysus:checked")].map(x=>x.value));
+ el("entrySuspected").innerHTML=allPerturbators().map(t=>`<label><input type="checkbox" class="entrysus" value="${esc(t)}" ${suspected.has(t)?"checked":""}>${esc(t)}</label>`).join("");
+}
+function renderCategories(){el("categories").innerHTML=db.foods.map((c,i)=>`<div class="cat"><strong>${esc(c.name)}</strong><div class="chips">${c.items.map(f=>{let k=foodKey(c.name,f);return `<button class="chip foodchip ${selectedItems.has(k)?"selected":""}" data-key="${esc(k)}">${esc(f)}</button>`}).join("")}</div></div>`).join("");document.querySelectorAll(".foodchip").forEach(b=>b.onclick=()=>{selectedItems.has(b.dataset.key)?selectedItems.delete(b.dataset.key):selectedItems.add(b.dataset.key);renderCategories();renderSelectedTags();renderEntryPerturbators()});renderSelectedTags();renderEntryPerturbators()}
+function renderSelectedTags(){let tags=selectedTags();el("selectedTags").innerHTML=selectedItems.size?`Aliments sélectionnés : ${selectedItems.size}<br>Perturbateurs habituels : ${tags.length?tags.map(t=>`<span class="chip selected">${esc(t)}</span>`).join(" "):"aucun renseigné"}<br><span>Tu peux ajouter ou retirer des perturbateurs pour cette consommation dans la configuration des aliments.</span>`:"Aucun aliment sélectionné."}
+function renderStatuses(){indicators=[...baseIndicators,...(db.customIndicators||[])];el("statuses").innerHTML=indicators.map((name,i)=>`<div style="margin:13px 0"><strong style="font-size:14px">${name}</strong><div class="status statusrow" data-ind="${i}">${levels.map(l=>`<button type="button" data-level="${l}">${l}</button>`).join("")}</div></div>`).join("");document.querySelectorAll(".status button").forEach(b=>b.onclick=()=>{b.parentElement.querySelectorAll("button").forEach(x=>x.className="");b.className=levelClass[b.dataset.level]});el("analysisMetric").innerHTML=indicators.map((n,i)=>`<option value="${i}">${n}</option>`).join("")}
+function selectedStatus(){let s={};document.querySelectorAll(".statusrow").forEach(r=>{let b=r.querySelector("button[class]");if(b)s[r.dataset.ind]=b.dataset.level});return s}
+function setStatuses(s={}){renderStatuses();Object.entries(s).forEach(([i,v])=>{let r=document.querySelector(`.statusrow[data-ind="${i}"]`),b=r&&[...r.querySelectorAll("button")].find(x=>x.dataset.level===v);if(b)b.className=levelClass[v]})}
+function addEvent(type,payload,time){db.events.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random()),type,time,...payload});persist();renderDay();renderCalendar();renderAnalysis();updateBackupInfo()}
+function clearFood(){selectedItems.clear();renderCategories();el("medName").value="";el("genericMeal").value="";renderEntryPerturbators()}
+function renderDay(){const date=el("dayDate").value||new Date().toLocaleDateString("en-CA");const list=db.events.filter(e=>e.time.slice(0,10)===date).sort((a,b)=>a.time.localeCompare(b.time));el("dayList").innerHTML=list.length?list.map(e=>eventHtml(e)).join(""):"<p class='small'>Aucune saisie pour cette date.</p>";bindEventButtons()}
+function eventHtml(e){let time=new Date(e.time).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit"});let desc=e.type==="food"?[...(e.items||[]).map(x=>x.name),e.genericMeal,e.medication].filter(Boolean).join(", ")+" · "+(e.perturbators||[]).join(", ")+((e.suspectedPerturbators||[]).length?" · Suspectés : "+e.suspectedPerturbators.join(", "):""):Object.entries(e.status||{}).map(([k,v])=>indicators[+k]+": "+v).join(" · ")+" "+(e.notes||"");return `<div class="event"><div class="eventhead"><strong>${e.type==="food"?"🍽️ Consommation":"📋 Observation"} · ${time}</strong><div class="eventactions"><button class="neutral" data-edit="${e.id}">Modifier</button><button class="danger" data-del="${e.id}">×</button></div></div><div class="small">${esc(desc||"—")}</div></div>`}
+function bindEventButtons(){document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(confirm("Supprimer cet événement ?")){db.events=db.events.filter(e=>e.id!==b.dataset.del);persist();renderDay();renderCalendar();renderAnalysis()}});document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openEdit(b.dataset.edit))}
+function openEdit(id){let e=db.events.find(x=>x.id===id);if(!e)return;let root=el("modalRoot");let content=`<div class="modalback"><div class="modal"><div class="row"><h2>Modifier une saisie</h2><button class="neutral" id="closeEdit">Fermer</button></div><label>Date et heure</label><input id="editTime" type="datetime-local" value="${esc(e.time)}">`;
+if(e.type==="food"){content+=`<p class="small">Cette modification concerne les aliments et perturbateurs enregistrés pour cette consommation.</p><label>Aliments (sélection multiple)</label><div id="editFoodList"></div><label>Perturbateurs identifiés</label><div id="editPert" class="tagchecks"></div><label>Perturbateurs suspectés</label><div id="editSus" class="tagchecks"></div><label>Plat / repas générique</label><input id="editGeneric" value="${esc(e.genericMeal||"")}"><label>Médicament</label><input id="editMed" value="${esc(e.medication||"")}">`}
+else{content+=`<div id="editStatuses"></div><label>Remarques</label><textarea id="editNotes">${esc(e.notes||"")}</textarea>`}
+content+=`<button class="primary" id="saveEdit" style="width:100%;margin-top:14px">Enregistrer les modifications</button></div></div>`;root.innerHTML=content;el("closeEdit").onclick=()=>root.innerHTML="";
+if(e.type==="food"){let old=new Set((e.items||[]).map(x=>foodKey(x.category,x.name)));el("editFoodList").innerHTML=db.foods.map(c=>`<div style="margin:8px 0"><strong>${esc(c.name)}</strong><div class="chips">${c.items.map(n=>`<label style="display:inline-flex;align-items:center;gap:4px"><input type="checkbox" class="editfood" data-cat="${esc(c.name)}" data-name="${esc(n)}" ${old.has(foodKey(c.name,n))?"checked":""}>${esc(n)}</label>`).join("")}</div></div>`).join("");let p=new Set(e.perturbators||[]);el("editPert").innerHTML=allPerturbators().map(t=>`<label><input type="checkbox" class="editpert" value="${esc(t)}" ${p.has(t)?"checked":""}>${esc(t)}</label>`).join("");let sp=new Set(e.suspectedPerturbators||[]);el("editSus").innerHTML=allPerturbators().map(t=>`<label><input type="checkbox" class="editsus" value="${esc(t)}" ${sp.has(t)?"checked":""}>${esc(t)}</label>`).join("")}
+else{el("editStatuses").innerHTML=indicators.map((n,i)=>`<div style="margin:12px 0"><strong>${n}</strong><div class="status statusrow" data-edit-ind="${i}">${levels.map(l=>`<button type="button" data-level="${l}" class="${e.status?.[i]===l?levelClass[l]:""}">${l}</button>`).join("")}</div></div>`).join("");document.querySelectorAll("#editStatuses button").forEach(b=>b.onclick=()=>{b.parentElement.querySelectorAll("button").forEach(x=>x.className="");b.className=levelClass[b.dataset.level]})}
+el("saveEdit").onclick=()=>{e.time=el("editTime").value;if(e.type==="food"){e.items=[...document.querySelectorAll(".editfood:checked")].map(x=>({category:x.dataset.cat,name:x.dataset.name}));e.perturbators=[...document.querySelectorAll(".editpert:checked")].map(x=>x.value);e.suspectedPerturbators=[...document.querySelectorAll(".editsus:checked")].map(x=>x.value);e.genericMeal=el("editGeneric").value.trim();e.medication=el("editMed").value.trim()}else{e.status={};document.querySelectorAll("[data-edit-ind]").forEach(r=>{let b=r.querySelector("button[class]");if(b)e.status[r.dataset.editInd]=b.dataset.level});e.notes=el("editNotes").value.trim()}persist();root.innerHTML="";renderDay();renderCalendar();renderAnalysis();updateBackupInfo()}}
+function renderAnalysis(){let idx=+el("analysisMetric").value||0,bad=db.events.filter(e=>e.type==="obs"&&e.status?.[idx]==="Mauvais"),good=db.events.filter(e=>e.type==="obs"&&e.status?.[idx]==="Bien"),all=[...bad.map(o=>({o,group:"bad"})),...good.map(o=>({o,group:"good"}))];let map={};function exposure(obs){let start=new Date(obs.time).getTime()-86400000,end=new Date(obs.time).getTime();return db.events.filter(e=>e.type==="food"&&new Date(e.time).getTime()>=start&&new Date(e.time).getTime()<end)}
+all.forEach(({o,group})=>{let seen=new Set();exposure(o).forEach(e=>{(e.items||[]).forEach(it=>seen.add(it.name));(e.perturbators||[]).forEach(t=>seen.add("Perturbateur identifié : "+t));(e.suspectedPerturbators||[]).forEach(t=>seen.add("Perturbateur suspecté : "+t));if(e.genericMeal)seen.add("Plat / repas : "+e.genericMeal)});seen.forEach(n=>{map[n]??={bad:0,good:0};map[n][group]++})});
+let rows=Object.entries(map).map(([n,v])=>({n,...v,badRate:bad.length?v.bad/bad.length:0,goodRate:good.length?v.good/good.length:0,diff:bad.length?v.bad/bad.length-(good.length?v.good/good.length:0):0})).sort((a,b)=>b.diff-a.diff);
+el("analysisResult").innerHTML=`<div class="notice">${bad.length} observation(s) « mauvais » et ${good.length} observation(s) « bien » pour ${esc(indicators[idx].toLowerCase())}. Les observations « moyen » ne sont pas utilisées dans cette comparaison.</div>`+(rows.length?rows.map(r=>`<div class="metric"><div class="metrichead"><span>${esc(r.n)}</span><span>${Math.round(r.badRate*100)} % / ${Math.round(r.goodRate*100)} %</span></div><div class="small">Présent avant ${r.bad} / ${bad.length} observations mauvaises et ${r.good} / ${good.length} observations bonnes.</div><div class="bar"><span style="width:${Math.min(100,Math.max(0,r.badRate*100))}%"></span></div></div>`).join(""):"<p class='small'>Pas encore assez de données pour comparer. Il faut des observations « bien » et « mauvais » ainsi que des consommations dans les 24 heures précédentes.</p>") }
+
+function renderCategoryManager(){el("categoryManager").innerHTML=db.foods.map((c,i)=>`<div class="tagline"><span><strong>${esc(c.name)}</strong> <span class="small">(${c.items.length} éléments)</span></span><span><button class="neutral" data-renamecat="${i}">Renommer</button> <button class="danger" data-delcat="${i}">Supprimer</button></span></div>`).join("");document.querySelectorAll("[data-renamecat]").forEach(b=>b.onclick=()=>{let i=+b.dataset.renamecat,old=db.foods[i].name,n=prompt("Nouveau nom de catégorie",old);if(!n||!n.trim())return;n=n.trim();if(db.foods.some((c,j)=>j!==i&&c.name.toLowerCase()===n.toLowerCase())){alert("Cette catégorie existe déjà.");return}let c=db.foods[i];c.name=n;Object.keys(db.foodTags).filter(k=>k.startsWith(old+"::")).forEach(k=>{db.foodTags[n+k.slice(old.length)]=db.foodTags[k];delete db.foodTags[k]});db.events.forEach(e=>(e.items||[]).forEach(it=>{if(it.category===old)it.category=n}));persist();renderCategories();renderManage();renderCategoryManager()});document.querySelectorAll("[data-delcat]").forEach(b=>b.onclick=()=>{let i=+b.dataset.delcat,c=db.foods[i];if(c.name==="Non classés"){alert("La catégorie Non classés ne peut pas être supprimée.");return}if(!confirm(`Supprimer la catégorie « ${c.name} » ? Ses aliments seront déplacés dans Non classés. Les anciens repas seront conservés.`))return;let unc=db.foods.find(x=>x.name==="Non classés");c.items.forEach(n=>{if(!unc.items.includes(n))unc.items.push(n)});db.foods.splice(i,1);persist();renderCategories();renderManage();renderCategoryManager()})}
+function renderIndicatorManager(){el("indicatorManager").innerHTML=(db.customIndicators||[]).map((n,i)=>`<div class="tagline"><span>${esc(n)}</span><button class="danger" data-delindicator="${i}">Supprimer</button></div>`).join("")||"<p class='small'>Aucun indicateur personnalisé.</p>";document.querySelectorAll("[data-delindicator]").forEach(b=>b.onclick=()=>{let n=db.customIndicators[+b.dataset.delindicator];if(confirm(`Supprimer « ${n} » des nouveaux formulaires ? Les anciennes observations restent conservées.`)){db.customIndicators.splice(+b.dataset.delindicator,1);indicators=[...baseIndicators,...db.customIndicators];persist();renderIndicatorManager();renderStatuses();renderAnalysis()}})}
+
+function renderManage(){
+ const opts=db.foods.map((c,i)=>`<option value="${i}">${esc(c.name)}</option>`).join("");
+ el("manageCat").innerHTML=opts;el("newCat").innerHTML=opts;el("removeCat").innerHTML=opts;
+ renderManageFoods();renderRemoveFoods();renderCustomPerturbators();renderCategoryManager();renderIndicatorManager();
+}
+function renderRemoveFoods(){
+ const c=db.foods[+el("removeCat").value||0];
+ el("removeFood").innerHTML=(c?.items||[]).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+}
+function renderCustomPerturbators(){
+ el("customPerturbatorList").innerHTML=(db.customPerturbators||[]).length
+ ? db.customPerturbators.map((p,i)=>`<div class="tagline"><span>${esc(p)}</span><button class="danger" data-delpert="${i}">Supprimer</button></div>`).join("")
+ : "<p class='small'>Aucun perturbateur personnalisé pour le moment.</p>";
+ document.querySelectorAll("[data-delpert]").forEach(b=>b.onclick=()=>{
+  const p=db.customPerturbators[+b.dataset.delpert];
+  if(confirm(`Supprimer « ${p} » de la liste ? Les anciens événements ne seront pas modifiés.`)){
+   db.customPerturbators.splice(+b.dataset.delpert,1);persist();renderCustomPerturbators();renderEntryPerturbators();renderFoodTagEditor();
+  }
+ });
+}
+function renderManageFoods(){let i=+el("manageCat").value||0,c=db.foods[i];el("manageFood").innerHTML=c.items.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");renderFoodTagEditor()}
+function renderFoodTagEditor(){let c=db.foods[+el("manageCat").value||0],n=el("manageFood").value,p=new Set(tagsFor(c?.name||"",n));el("foodTagEditor").innerHTML=n?`<p class="small">Perturbateurs habituellement associés à « ${esc(n)} » :</p><div class="tagchecks">${allPerturbators().map(t=>`<label><input type="checkbox" class="foodtag" value="${esc(t)}" ${p.has(t)?"checked":""}>${esc(t)}</label>`).join("")}</div>`:"<p class='small'>Ajoute d'abord un aliment dans cette catégorie.</p>"}
+function renderCalendar(){let y=monthCursor.getFullYear(),m=monthCursor.getMonth(),first=new Date(y,m,1),days=new Date(y,m+1,0).getDate(),offset=(first.getDay()+6)%7;el("monthTitle").textContent=first.toLocaleDateString("fr-CH",{month:"long",year:"numeric"});let html=["Lu","Ma","Me","Je","Ve","Sa","Di"].map(x=>`<div class="small" style="text-align:center">${x}</div>`).join("");for(let i=0;i<offset;i++)html+="<div></div>";for(let d=1;d<=days;d++){let date=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`,obs=db.events.filter(e=>e.type==="obs"&&e.time.slice(0,10)===date),vals=obs.flatMap(o=>Object.values(o.status||{})),cls=vals.length?(vals.includes("Mauvais")?"bad":vals.includes("Moyen")?"mixed":"good"):"",today=date===new Date().toLocaleDateString("en-CA");html+=`<button class="daycell ${cls} ${today?"today":""}" data-date="${date}">${d}${obs.length?`<div style="font-size:10px">${obs.length} obs.</div>`:""}</button>`}el("monthGrid").innerHTML=html;document.querySelectorAll("[data-date]").forEach(b=>b.onclick=()=>{el("dayDate").value=b.dataset.date;renderDay()})}
+function updateBackupInfo(){el("backupInfo").textContent=`Dernière copie automatique interne : ${db.lastBackup||"en attente"} · ${db.backups.length} copie(s) conservée(s).`;if(navigator.storage?.persist){navigator.storage.persist().then(ok=>el("storageInfo").textContent=ok?"Le navigateur a accordé une conservation renforcée des données locales.":"Le navigateur peut encore nettoyer les données locales en cas de manque d'espace.")}}
+function download(name,content,type){let a=document.createElement("a"),url=URL.createObjectURL(new Blob([content],{type}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+function exportCSV(){let rows=[["Type","Date et heure","Catégorie","Aliment / médicament","Perturbateurs identifiés","Perturbateurs suspectés",...indicators,"Remarques"]];db.events.slice().sort((a,b)=>a.time.localeCompare(b.time)).forEach(e=>{if(e.type==="food"){(e.items||[]).forEach(it=>rows.push(["Consommation",e.time,it.category,it.name,(e.perturbators||[]).join("; "),(e.suspectedPerturbators||[]).join("; "),...indicators.map(()=>""),""]));if(e.genericMeal)rows.push(["Consommation",e.time,"Plats génériques",e.genericMeal,(e.perturbators||[]).join("; "),(e.suspectedPerturbators||[]).join("; "),...indicators.map(()=>""),""]);if(e.medication)rows.push(["Médicament",e.time,"Médicaments",e.medication,(e.perturbators||[]).join("; "),(e.suspectedPerturbators||[]).join("; "),...indicators.map(()=>""),""]);}else rows.push(["Observation",e.time,"","","","",...indicators.map((_,i)=>e.status?.[i]||""),e.notes||""])});download("journal-alimentaire.csv","\ufeff"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\r\n"),"text/csv;charset=utf-8")}
+function init(){
+ el("eventTime").value=localISO();el("obsTime").value=localISO();el("dayDate").value=new Date().toLocaleDateString("en-CA");
+ renderCategories();renderStatuses();renderManage();renderEntryPerturbators();renderCalendar();renderDay();renderAnalysis();updateBackupInfo();
+ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));if(b.dataset.tab==="jour"){renderCalendar();renderDay()}if(b.dataset.tab==="analyse")renderAnalysis()});
+ el("saveFood").onclick=()=>{let items=[...selectedItems].map(k=>{let [category,name]=k.split("::");return {category,name}}),med=el("medName").value.trim();let generic=el("genericMeal").value.trim();if(!items.length&&!med&&!generic){alert("Sélectionne un aliment, indique un plat / repas générique ou un médicament.");return}addEvent("food",{items,genericMeal:generic,perturbators:[...document.querySelectorAll(".entrypert:checked")].map(x=>x.value),suspectedPerturbators:[...document.querySelectorAll(".entrysus:checked")].map(x=>x.value),medication:med},el("eventTime").value);clearFood();alert("Consommation enregistrée.")};
+ el("clearFood").onclick=clearFood;
+ el("saveObs").onclick=()=>{let status=selectedStatus(),notes=el("notes").value.trim();if(!Object.keys(status).length&&!notes){alert("Sélectionne au moins un indicateur ou ajoute une remarque.");return}addEvent("obs",{status,notes},el("obsTime").value);el("notes").value="";setStatuses();alert("Observation enregistrée.")};
+ el("dayDate").onchange=renderDay;el("analysisMetric").onchange=renderAnalysis;
+ el("prevMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()-1);renderCalendar()};el("nextMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()+1);renderCalendar()};el("todayBtn").onclick=()=>{monthCursor=new Date();el("dayDate").value=new Date().toLocaleDateString("en-CA");renderCalendar();renderDay()};
+ el("manageCat").onchange=renderManageFoods;el("manageFood").onchange=renderFoodTagEditor;el("removeCat").onchange=renderRemoveFoods;
+ el("saveFoodTags").onclick=()=>{let c=db.foods[+el("manageCat").value],n=el("manageFood").value;if(!n)return;db.foodTags[foodKey(c.name,n)]=[...document.querySelectorAll(".foodtag:checked")].map(x=>x.value);persist();renderCategories();renderFoodTagEditor();alert("Perturbateurs habituels enregistrés.")};
+ el("deleteFood").onclick=()=>{
+  const i=+el("removeCat").value,c=db.foods[i],n=el("removeFood").value;
+  if(!c||!n)return;
+  if(confirm(`Retirer « ${n} » de la liste ${c.name} ? Les anciennes consommations seront conservées.`)){
+    c.items=c.items.filter(x=>x!==n);delete db.foodTags[foodKey(c.name,n)];
+    persist();renderCategories();renderManage();el("removeCat").value=String(i);renderRemoveFoods();
+  }
+ };
+ el("addCategory").onclick=()=>{let n=el("newCategoryName").value.trim();if(!n)return;if(db.foods.some(c=>c.name.toLowerCase()===n.toLowerCase())){alert("Cette catégorie existe déjà.");return}db.foods.push({name:n,items:[]});persist();el("newCategoryName").value="";renderCategories();renderManage();renderCategoryManager()};
+ el("addIndicator").onclick=()=>{let n=el("newIndicator").value.trim();if(!n)return;if(indicators.some(x=>x.toLowerCase()===n.toLowerCase())){alert("Cet indicateur existe déjà.");return}db.customIndicators.push(n);indicators=[...baseIndicators,...db.customIndicators];persist();el("newIndicator").value="";renderIndicatorManager();renderStatuses();renderAnalysis()};
+ el("addPerturbator").onclick=()=>{
+  const n=el("newPerturbator").value.trim();
+  if(!n)return;
+  if(allPerturbators().some(x=>x.toLowerCase()===n.toLowerCase())){alert("Ce perturbateur existe déjà.");return}
+  db.customPerturbators.push(n);persist();el("newPerturbator").value="";renderCustomPerturbators();renderEntryPerturbators();renderFoodTagEditor();
+ };
+ el("addFood").onclick=()=>{let n=el("newFood").value.trim(),i=+el("newCat").value;if(!n)return;if(db.foods[i].items.some(x=>x.toLowerCase()===n.toLowerCase())){alert("Cet élément existe déjà.");return}db.foods[i].items.push(n);persist();el("newFood").value="";renderCategories();renderManage();el("manageCat").value=String(i);renderManageFoods()};
+ el("exportCsv").onclick=exportCSV;el("exportJson").onclick=()=>download("sauvegarde-journal-alimentaire.json",JSON.stringify({events:db.events,foods:db.foods,foodTags:db.foodTags,customPerturbators:db.customPerturbators,customIndicators:db.customIndicators,exportedAt:new Date().toISOString()},null,2),"application/json");
+ el("importFile").onchange=async ev=>{let f=ev.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.events)||!Array.isArray(d.foods))throw Error();if(confirm("Remplacer les données actuelles par cette sauvegarde ?")){db.events=d.events;db.foods=(d.foods||[]).map(c=>({...c,items:c.items||[]}));if(!db.foods.some(c=>c.name==="Non classés"))db.foods.push({name:"Non classés",items:[]});if(!db.foods.some(c=>c.name==="Plats génériques"))db.foods.push({name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]});db.foodTags=d.foodTags||{};db.customPerturbators=d.customPerturbators||[];db.customIndicators=d.customIndicators||[];indicators=[...baseIndicators,...db.customIndicators];persist();renderCategories();renderManage();renderDay();renderCalendar();renderAnalysis();alert("Sauvegarde restaurée.")}}catch(e){alert("Fichier de sauvegarde non reconnu.")}ev.target.value=""};
+}
+init();
+if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body></html>
