@@ -69,8 +69,14 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding:18px}
 <section id="analyse" class="tab hidden">
 <div class="panel">
 <h2>Vue d'ensemble</h2>
-<p class="small">Les journées sont classées à partir des observations enregistrées : difficile si au moins un indicateur est « Mauvais », satisfaisante si tous les indicateurs renseignés sont « Bien », intermédiaire dans les autres cas. Une journée sans observation n'est pas classée.</p>
+<p class="small">Les journées sont classées à partir des observations enregistrées : score moyen : Bien = 3, Moyen = 2, Mauvais = 1. Journée plutôt bonne à partir de 2,5 ; intermédiaire de 1,75 à 2,49 ; difficile en dessous de 1,75. Une journée sans observation n'est pas classée.</p>
 <div id="analysisOverview"></div>
+<label for="dayContextDate">Commentaire sur une journée (contexte extérieur à l'alimentation)</label>
+<input type="date" id="dayContextDate">
+<textarea id="dayContextNote" rows="3" placeholder="Ex. stress au travail, mauvaise nuit, activité physique inhabituelle, maladie, déplacement..."></textarea>
+<button class="secondary" id="saveDayContext" style="margin-top:8px">Enregistrer le commentaire</button>
+<p class="small">Ces commentaires servent à garder en mémoire les facteurs qui pourraient expliquer une journée, sans les attribuer à l'alimentation.</p>
+<div id="dayContextList"></div>
 </div>
 <div class="panel">
 <h2>Analyse automatique</h2>
@@ -121,7 +127,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding:18px}
 <label for="importFile">Restaurer une sauvegarde JSON</label><input type="file" id="importFile" accept="application/json">
 <p id="backupInfo" class="small"></p><div id="storageInfo" class="small"></div>
 </div></section>
-<footer>Version 3.1 · Données locales à cet appareil · Aucun compte utilisateur</footer>
+<footer>Version 3.3 · Données locales à cet appareil · Aucun compte utilisateur</footer>
 </main>
 <div id="modalRoot"></div>
 <script>
@@ -141,9 +147,9 @@ const baseIndicators=["Inconfort intestinal","Selles","Urines","Reflux","Humeur"
 let indicators=[...baseIndicators];
 const levels=["Bien","Moyen","Mauvais"], levelClass={"Bien":"sel-good","Moyen":"sel-mid","Mauvais":"sel-bad"};
 let db=load(), selectedItems=new Set(), monthCursor=new Date();
-function load(){try{let d=JSON.parse(localStorage.getItem(KEY));if(!d)return fresh();d.foods=d.foods||defaultCats.map(x=>({name:x[0],items:x[1]}));d.events=d.events||[];d.foodTags=d.foodTags||{};d.customPerturbators=d.customPerturbators||[];d.customIndicators=d.customIndicators||[];d.disabledIndicators=d.disabledIndicators||[];d.disabledPerturbators=d.disabledPerturbators||[];d.backups=d.backups||[];d.foods=d.foods.map(c=>({...c,items:c.items||[]}));d.foods.push(...[]);if(!d.foods.some(c=>c.name==="Non classés"))d.foods.push({name:"Non classés",items:[]});if(!d.foods.some(c=>c.name==="Plats génériques"))d.foods.push({name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]});indicators=[...baseIndicators,...d.customIndicators];return d}catch(e){return fresh()}}
-function fresh(){return {events:[],foods:[...defaultCats.map(x=>({name:x[0],items:x[1]})),{name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]}],foodTags:{},customPerturbators:[],customIndicators:[],disabledIndicators:[],disabledPerturbators:[],backups:[]}}
-function persist(){const today=new Date().toLocaleDateString("en-CA");if(db.lastBackup!==today){db.backups.push({date:today,data:JSON.stringify({events:db.events,foods:db.foods,foodTags:db.foodTags,customPerturbators:db.customPerturbators,customIndicators:db.customIndicators,disabledIndicators:db.disabledIndicators||[],disabledPerturbators:db.disabledPerturbators||[]})});db.backups=db.backups.slice(-7);db.lastBackup=today}localStorage.setItem(KEY,JSON.stringify(db));}
+function load(){try{let d=JSON.parse(localStorage.getItem(KEY));if(!d)return fresh();d.foods=d.foods||defaultCats.map(x=>({name:x[0],items:x[1]}));d.events=d.events||[];d.dayNotes=d.dayNotes||{};d.foodTags=d.foodTags||{};d.customPerturbators=d.customPerturbators||[];d.customIndicators=d.customIndicators||[];d.disabledIndicators=d.disabledIndicators||[];d.disabledPerturbators=d.disabledPerturbators||[];d.backups=d.backups||[];d.foods=d.foods.map(c=>({...c,items:c.items||[]}));d.foods.push(...[]);if(!d.foods.some(c=>c.name==="Non classés"))d.foods.push({name:"Non classés",items:[]});if(!d.foods.some(c=>c.name==="Plats génériques"))d.foods.push({name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]});indicators=[...baseIndicators,...d.customIndicators];return d}catch(e){return fresh()}}
+function fresh(){return {events:[],dayNotes:{},foods:[...defaultCats.map(x=>({name:x[0],items:x[1]})),{name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]}],foodTags:{},customPerturbators:[],customIndicators:[],disabledIndicators:[],disabledPerturbators:[],backups:[]}}
+function persist(){const today=new Date().toLocaleDateString("en-CA");if(db.lastBackup!==today){db.backups.push({date:today,data:JSON.stringify({events:db.events,dayNotes:db.dayNotes||{},foods:db.foods,foodTags:db.foodTags,customPerturbators:db.customPerturbators,customIndicators:db.customIndicators,disabledIndicators:db.disabledIndicators||[],disabledPerturbators:db.disabledPerturbators||[]})});db.backups=db.backups.slice(-7);db.lastBackup=today}localStorage.setItem(KEY,JSON.stringify(db));}
 function el(id){return document.getElementById(id)}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function localISO(d=new Date()){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
@@ -217,15 +223,25 @@ function observationDayRecords(metric){
   const date=String(o.time||"").slice(0,10);if(!date)return;
   let level="";
   if(metric==="global"){
-   const vals=Object.keys(o.status||{}).map(k=>{const idx=/^\d+$/.test(k)?+k:indicators.findIndex(n=>n.toLowerCase()===String(k).toLowerCase());return normalizeLevel(idx>=0?statusAt(o,idx):o.status[k])}).filter(v=>["Bien","Moyen","Mauvais"].includes(v));
-   if(vals.includes("Mauvais"))level="Mauvais";else if(vals.length&&vals.every(v=>v==="Bien"))level="Bien";else if(vals.length)level="Moyen";
+   const vals=Object.keys(o.status||{}).map(k=>{const idx=/^\\d+$/.test(k)?+k:indicators.findIndex(n=>n.toLowerCase()===String(k).toLowerCase());return normalizeLevel(idx>=0?statusAt(o,idx):o.status[k])}).filter(v=>["Bien","Moyen","Mauvais"].includes(v));
+   if(vals.length){
+    const score=vals.reduce((sum,v)=>sum+({Bien:3,Moyen:2,Mauvais:1}[v]),0)/vals.length;
+    level=score>=2.5?"Bien":score>=1.75?"Moyen":"Mauvais";
+   }
   }else{
    const idx=+metric;level=statusAt(o,idx);
   }
   if(!["Bien","Moyen","Mauvais"].includes(level))return;
-  const prev=byDate.get(date);
-  const rank={Bien:1,Moyen:2,Mauvais:3};
-  if(!prev||rank[level]>rank[prev.level]|| (level===prev.level&&o.time>prev.time))byDate.set(date,{date,level,time:o.time,event:o});
+  const prev=byDate.get(date),rank={Bien:1,Moyen:2,Mauvais:3};
+  if(!prev)byDate.set(date,{date,level,time:o.time,event:o});
+  else if(metric!=="global"&&(rank[level]>rank[prev.level]||(level===prev.level&&o.time>prev.time)))byDate.set(date,{date,level,time:o.time,event:o});
+  else if(metric==="global"){
+   const dayEvents=obs.filter(x=>String(x.time||"").slice(0,10)===date);
+   const values=dayEvents.flatMap(x=>Object.keys(x.status||{}).map(k=>{const idx=/^\\d+$/.test(k)?+k:indicators.findIndex(n=>n.toLowerCase()===String(k).toLowerCase());return normalizeLevel(idx>=0?statusAt(x,idx):x.status[k])})).filter(v=>["Bien","Moyen","Mauvais"].includes(v));
+   const score=values.length?values.reduce((sum,v)=>sum+({Bien:3,Moyen:2,Mauvais:1}[v]),0)/values.length:0;
+   const dailyLevel=score>=2.5?"Bien":score>=1.75?"Moyen":"Mauvais";
+   byDate.set(date,{date,level:dailyLevel,time:o.time,event:o,score});
+  }
  });
  return [...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
 }
@@ -244,11 +260,17 @@ function exposureLabels(record){
  });
  return labels;
 }
+function renderDayContext(){
+ const date=el("dayContextDate").value;
+ el("dayContextNote").value=date?(db.dayNotes?.[date]||""):"";
+ const notes=Object.entries(db.dayNotes||{}).filter(([d,n])=>n).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,8);
+ el("dayContextList").innerHTML=notes.map(([d,n])=>`<div class="metric"><strong>${esc(d)}</strong><div>${esc(n)}</div></div>`).join("");
+}
 function renderAnalysis(){
  const metric=el("analysisMetric").value||"global";
  const records=observationDayRecords(metric);
  const good=records.filter(r=>r.level==="Bien"),bad=records.filter(r=>r.level==="Mauvais"),mid=records.filter(r=>r.level==="Moyen");
- el("analysisOverview").innerHTML=`<div class="row"><div class="notice"><strong>${good.length}</strong><br>Journées satisfaisantes</div><div class="notice"><strong>${mid.length}</strong><br>Journées intermédiaires</div><div class="notice"><strong>${bad.length}</strong><br>Journées difficiles</div></div><p class="small">Une journée est comptée une seule fois. En cas de plusieurs observations, le niveau le plus défavorable de la journée est retenu. « Global » tient compte de tous les indicateurs renseignés.</p>`;
+ el("analysisOverview").innerHTML=`<div class="row"><div class="notice"><strong>${good.length}</strong><br>Journées satisfaisantes</div><div class="notice"><strong>${mid.length}</strong><br>Journées intermédiaires</div><div class="notice"><strong>${bad.length}</strong><br>Journées difficiles</div></div><p class="small">Une journée est comptée une seule fois. Le groupe global est calculé à partir de la moyenne de tous les niveaux renseignés ce jour-là. Les seuils sont indicatifs et modifiables si cette classification ne correspond pas à ton ressenti.</p>`;
  const map=new Map();
  [...bad.map(r=>({...r,group:"bad"})),...good.map(r=>({...r,group:"good"}))].forEach(r=>{
   exposureLabels(r).forEach(label=>{if(!map.has(label))map.set(label,{bad:0,good:0});map.get(label)[r.group]++});
@@ -311,13 +333,13 @@ function updateBackupInfo(){el("backupInfo").textContent=`Dernière copie automa
 function download(name,content,type){let a=document.createElement("a"),url=URL.createObjectURL(new Blob([content],{type}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
 function exportCSV(){let rows=[["Type","Date et heure","Catégorie","Aliment / médicament","Perturbateurs identifiés","Perturbateurs suspectés",...indicators,"Remarques"]];db.events.slice().sort((a,b)=>a.time.localeCompare(b.time)).forEach(e=>{if(e.type==="food"){(e.items||[]).forEach(it=>rows.push(["Consommation",e.time,it.category,it.name,(e.perturbators||[]).join("; "),(e.suspectedPerturbators||[]).join("; "),...indicators.map(()=>""),""]));if(e.genericMeal)rows.push(["Consommation",e.time,"Plats génériques",e.genericMeal,(e.perturbators||[]).join("; "),(e.suspectedPerturbators||[]).join("; "),...indicators.map(()=>""),""]);if(e.medication)rows.push(["Médicament",e.time,"Médicaments",e.medication,(e.perturbators||[]).join("; "),(e.suspectedPerturbators||[]).join("; "),...indicators.map(()=>""),""]);}else rows.push(["Observation",e.time,"","","","",...indicators.map((_,i)=>e.status?.[i]||""),e.notes||""])});download("journal-alimentaire.csv","\ufeff"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\r\n"),"text/csv;charset=utf-8")}
 function init(){
- el("eventTime").value=localISO();el("obsTime").value=localISO();el("dayDate").value=new Date().toLocaleDateString("en-CA");
- renderCategories();renderStatuses();renderManage();renderEntryPerturbators();renderCalendar();renderDay();renderAnalysis();updateBackupInfo();
+ el("eventTime").value=localISO();el("obsTime").value=localISO();el("dayDate").value=new Date().toLocaleDateString("en-CA");el("dayContextDate").value=el("dayDate").value;
+ renderCategories();renderStatuses();renderManage();renderEntryPerturbators();renderCalendar();renderDay();renderAnalysis();renderDayContext();updateBackupInfo();
  document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));if(b.dataset.tab==="jour"){renderCalendar();renderDay()}if(b.dataset.tab==="analyse")renderAnalysis()});
  el("saveFood").onclick=()=>{let items=[...selectedItems].map(k=>{let [category,name]=k.split("::");return {category,name}}),med=el("medName").value.trim();let generic=el("genericMeal").value.trim();if(!items.length&&!med&&!generic){alert("Sélectionne un aliment, indique un plat / repas générique ou un médicament.");return}addEvent("food",{items,genericMeal:generic,perturbators:[...document.querySelectorAll(".entrypert:checked")].map(x=>x.value),suspectedPerturbators:[...document.querySelectorAll(".entrysus:checked")].map(x=>x.value),medication:med},el("eventTime").value);clearFood();alert("Consommation enregistrée.")};
  el("clearFood").onclick=clearFood;
  el("saveObs").onclick=()=>{let status=selectedStatus(),notes=el("notes").value.trim();if(!Object.keys(status).length&&!notes){alert("Sélectionne au moins un indicateur ou ajoute une remarque.");return}addEvent("obs",{status,notes},el("obsTime").value);el("notes").value="";setStatuses();alert("Observation enregistrée.")};
- el("dayDate").onchange=renderDay;el("analysisMetric").onchange=renderAnalysis;el("compareDays").onclick=compareSelectedDays;
+ el("dayDate").onchange=renderDay;el("analysisMetric").onchange=renderAnalysis;el("compareDays").onclick=compareSelectedDays;el("dayContextDate").onchange=renderDayContext;el("saveDayContext").onclick=()=>{const d=el("dayContextDate").value;if(!d){alert("Choisis une date.");return}db.dayNotes=db.dayNotes||{};const note=el("dayContextNote").value.trim();if(note)db.dayNotes[d]=note;else delete db.dayNotes[d];persist();renderDayContext();alert("Commentaire enregistré.")};
  el("prevMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()-1);renderCalendar()};el("nextMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()+1);renderCalendar()};el("todayBtn").onclick=()=>{monthCursor=new Date();el("dayDate").value=new Date().toLocaleDateString("en-CA");renderCalendar();renderDay()};
  el("manageCat").onchange=renderManageFoods;el("manageFood").onchange=renderFoodTagEditor;el("removeCat").onchange=renderRemoveFoods;
  el("saveFoodTags").onclick=()=>{let c=db.foods[+el("manageCat").value],n=el("manageFood").value;if(!n)return;db.foodTags[foodKey(c.name,n)]=[...document.querySelectorAll(".foodtag:checked")].map(x=>x.value);persist();renderCategories();renderFoodTagEditor();alert("Perturbateurs habituels enregistrés.")};
@@ -338,8 +360,8 @@ function init(){
   db.customPerturbators.push(n);db.disabledPerturbators=(db.disabledPerturbators||[]).filter(x=>x!==n);persist();el("newPerturbator").value="";renderCustomPerturbators();renderEntryPerturbators();renderFoodTagEditor();
  };
  el("addFood").onclick=()=>{let n=el("newFood").value.trim(),i=+el("newCat").value;if(!n)return;if(db.foods[i].items.some(x=>x.toLowerCase()===n.toLowerCase())){alert("Cet élément existe déjà.");return}db.foods[i].items.push(n);persist();el("newFood").value="";renderCategories();renderManage();el("manageCat").value=String(i);renderManageFoods()};
- el("exportCsv").onclick=exportCSV;el("exportJson").onclick=()=>download("sauvegarde-journal-alimentaire.json",JSON.stringify({events:db.events,foods:db.foods,foodTags:db.foodTags,customPerturbators:db.customPerturbators,customIndicators:db.customIndicators,disabledIndicators:db.disabledIndicators||[],disabledPerturbators:db.disabledPerturbators||[],exportedAt:new Date().toISOString()},null,2),"application/json");
- el("importFile").onchange=async ev=>{let f=ev.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.events)||!Array.isArray(d.foods))throw Error();if(confirm("Remplacer les données actuelles par cette sauvegarde ?")){db.events=d.events;db.foods=(d.foods||[]).map(c=>({...c,items:c.items||[]}));if(!db.foods.some(c=>c.name==="Non classés"))db.foods.push({name:"Non classés",items:[]});if(!db.foods.some(c=>c.name==="Plats génériques"))db.foods.push({name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]});db.foodTags=d.foodTags||{};db.customPerturbators=d.customPerturbators||[];db.customIndicators=d.customIndicators||[];db.disabledIndicators=d.disabledIndicators||[];db.disabledPerturbators=d.disabledPerturbators||[];indicators=[...baseIndicators,...db.customIndicators];persist();renderCategories();renderManage();renderDay();renderCalendar();renderAnalysis();alert("Sauvegarde restaurée.")}}catch(e){alert("Fichier de sauvegarde non reconnu.")}ev.target.value=""};
+ el("exportCsv").onclick=exportCSV;el("exportJson").onclick=()=>download("sauvegarde-journal-alimentaire.json",JSON.stringify({events:db.events,dayNotes:db.dayNotes||{},foods:db.foods,foodTags:db.foodTags,customPerturbators:db.customPerturbators,customIndicators:db.customIndicators,disabledIndicators:db.disabledIndicators||[],disabledPerturbators:db.disabledPerturbators||[],exportedAt:new Date().toISOString()},null,2),"application/json");
+ el("importFile").onchange=async ev=>{let f=ev.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.events)||!Array.isArray(d.foods))throw Error();if(confirm("Remplacer les données actuelles par cette sauvegarde ?")){db.events=d.events;db.dayNotes=d.dayNotes||{};db.foods=(d.foods||[]).map(c=>({...c,items:c.items||[]}));if(!db.foods.some(c=>c.name==="Non classés"))db.foods.push({name:"Non classés",items:[]});if(!db.foods.some(c=>c.name==="Plats génériques"))db.foods.push({name:"Plats génériques",items:["Soupe de légumes","Purée de légumes","Salade composée","Plat cuisiné","Repas au restaurant","Viande au restaurant","Poisson au restaurant","Sauce ou vinaigrette"]});db.foodTags=d.foodTags||{};db.customPerturbators=d.customPerturbators||[];db.customIndicators=d.customIndicators||[];db.disabledIndicators=d.disabledIndicators||[];db.disabledPerturbators=d.disabledPerturbators||[];indicators=[...baseIndicators,...db.customIndicators];persist();renderCategories();renderManage();renderDay();renderCalendar();renderAnalysis();alert("Sauvegarde restaurée.")}}catch(e){alert("Fichier de sauvegarde non reconnu.")}ev.target.value=""};
 }
 init();
 if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
